@@ -18,3 +18,9 @@ class CNN(nn.Module):
         self.relu_layer = nn.ReLU()
         self.max_pool_layer = nn.MaxPool2d(kernel_size=2, stirde=1)
         self.fully_conected_layer_1 = nn.Linear(7*7*64, 128)
+        self.fully_conected_layer_2 = nn.Linear(128, 10)
+
+def forward(self, x):
+    x = self.relu_layer(self.conv_layer_1(x))
+    x = self.max_pool_layer(x)
+    
