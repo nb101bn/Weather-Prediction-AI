@@ -20,7 +20,13 @@ class CNN(nn.Module):
         self.fully_conected_layer_1 = nn.Linear(7*7*64, 128)
         self.fully_conected_layer_2 = nn.Linear(128, 10)
 
-def forward(self, x):
-    x = self.relu_layer(self.conv_layer_1(x))
-    x = self.max_pool_layer(x)
-    
+    def forward(self, x):
+        x = self.relu_layer(self.conv_layer_1(x))
+        x = self.max_pool_layer(x)
+        x = self.relu_layer(x)
+        x = self.max_pool_layer(x)
+        x = x.vew(-1, 7*7*64)
+        x = self.relu(self.fully_connected_layer_1(x))
+        x = self.fully_connected_layer_2(x)
+        return x
+transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.1307),(0.3081))])
