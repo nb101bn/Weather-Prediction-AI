@@ -5,7 +5,9 @@ import os
 import datetime
 from torch.utils.data import Dataset
 from PIL import Image
+from io import BytesIO
 from torchvision import transforms
+import torch
 
 def ensure_integer(value):
     while not isinstance(value, int):
@@ -35,17 +37,32 @@ def surface_map_requests():
         start_date += datetime.timedelta(hours=3)
 surface_map_requests()
 
-class SurfaceMapDataset(Dataset):
-    def __init__(self, root_dir, transform=None):
-        self.root_dir = root_dir
+class SurfaceMap_Dataset(Dataset):
+    def __init__(self, start_date, end_date, hours_back=6, transform=None):
+        self.start_date = start_date
+        self.end_date = end_date
+        self.hours_back = hours_back
         self.transform = transform
-        self.image_files = [f for f in os.lisdir(root_dir) if f.endswith('.png')]
+    def download_png(self, url):
+        response = requests.get(url)
+        img = Image.open(BytesIO(response.content))
+        return img
+    
     def __len__(self):
-        return len(self.image_files)
+        return(self.end_date - self.start_date).days +1
     
     def __getitem__(self, idx):
-        img_name =  os.path.join(self.root_dir, self.image_files[idx])
-        image = image.open(img_name)
-        if self.transform:
-            image =self.transform(image)
-        return image
+        date = self.start_date + datetime.timedelta(days=idx)
+        surface_maps = []
+        for i in range(self.hours_back):
+            surface_date = date - datetime.timedelta(hours=(i*3))
+            year = surface_date.strftime('%Y')
+            month = surface_date.strftime('%m')
+            day = surface_date.strftime('%d')
+            hour = surface_date.strftime('%H')
+            surface_url = f'https://www.wpc.ncep.noaa.gov/archives/sfc/{year}/sfc{year}{month}{day}{hour}z.gif'
+            surface_map = self.download_png(surface_url)
+            surface_maps.append(surface_map)
+            if self.transform:
+                surface_maps = [self.transform(sm) for sm in surface_maps]
+            return torch.stack(surface_maps)
