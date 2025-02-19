@@ -3,6 +3,9 @@ import pandas as pd
 import time
 import os
 import datetime
+from torch.utils.data import Dataset
+from PIL import Image
+from torchvision import transforms
 
 def ensure_integer(value):
     while not isinstance(value, int):
@@ -31,3 +34,18 @@ def surface_map_requests():
         download_png(url, filename)
         start_date += datetime.timedelta(hours=3)
 surface_map_requests()
+
+class SurfaceMapDataset(Dataset):
+    def __init__(self, root_dir, transform=None):
+        self.root_dir = root_dir
+        self.transform = transform
+        self.image_files = [f for f in os.lisdir(root_dir) if f.endswith('.png')]
+    def __len__(self):
+        return len(self.image_files)
+    
+    def __getitem__(self, idx):
+        img_name =  os.path.join(self.root_dir, self.image_files[idx])
+        image = image.open(img_name)
+        if self.transform:
+            image =self.transform(image)
+        return image
