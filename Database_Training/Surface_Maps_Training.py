@@ -8,6 +8,7 @@ from PIL import Image
 from io import BytesIO
 from torchvision import transforms
 import torch
+import numpy as np
 
 def ensure_integer(value):
     while not isinstance(value, int):
@@ -63,6 +64,6 @@ class SurfaceMap_Dataset(Dataset):
             surface_url = f'https://www.wpc.ncep.noaa.gov/archives/sfc/{year}/sfc{year}{month}{day}{hour}z.gif'
             surface_map = self.download_png(surface_url)
             surface_maps.append(surface_map)
-            if self.transform:
-                surface_maps = [self.transform(sm) for sm in surface_maps]
-            return torch.stack(surface_maps)
+        if self.transform:
+            surface_maps = [self.transform(sm) for sm in surface_maps]
+        return torch.stack([torch.tensor(np.array(sm)) for sm in surface_maps], dim=0)

@@ -33,9 +33,13 @@ class CoCoRaHS_Dataset(Dataset):
         self.date_list = self.create_date_list()
     
     def download_png(self, url):
-        response =requests.get(url)
-        img = Image.open(BytesIO(response.content))
-        return img
+        try:
+            response =requests.get(url)
+            img = Image.open(BytesIO(response.content))
+            return img
+        except requests.exceptions.RequestException as e:
+            print(f'Error downloading {url}: {e}')
+            return None
     
     def __len__(self):
         return (self.end_date - self.start_date).days + 1

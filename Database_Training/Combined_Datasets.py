@@ -12,5 +12,8 @@ class Combined_Datasets(Dataset):
     def __getitem__(self, idx):
         precip_map = self.precip_dataset[idx]
         surface_maps = self.surface_map_dataset[idx]
-        surface_maps_stack = torch.stack(surface_maps)
+        if isinstance(surface_maps, list):
+            surface_maps_stack = torch.stack(surface_maps)
+        else:
+            raise ValueError(f'Expected to get Surface Maps to be a list but got {type(surface_maps)}')
         return surface_maps_stack, precip_map

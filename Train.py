@@ -7,15 +7,16 @@ from Database_Training import Surface_Maps_Training
 from Database_Training import Combined_Datasets
 from Model import AI_Processor
 import datetime
-import matplotlib as plt
+import matplotlib.pyplot as plt
+import numpy as np
 import os
 
 def save_output_images(predictions, epoch, batch_idx, output_dir):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     for i, pred in enumerate(predictions):
-        pred_image = pred.detach().cpu().numpy
-        pred_image = (pred_image-pred_image.min()/(pred_image.max()-pred_image.min))
+        pred_image = pred.detach().cpu().numpy()
+        pred_image = (pred_image - pred_image.min())  / (pred_image.max() - pred_image.min)
         plt.imshow(pred_image, camp='viridis')
         plt.axis('off')
         plt.savefig(f'{output_dir}\\pred_epoch{epoch}_batch{batch_idx}_image{i}.png', bbox_inches='tight', pad_inches=0)
@@ -45,12 +46,27 @@ for epoch in range(num_epochs):
         loss = criterion(outputs, precip_maps)
         loss.backward()
         optimizer.step()
+        running_loss += loss.item()
         if batch_idx % 10 == 0:
             save_output_images(outputs, epoch, batch_idx, output_dir)
         if batch_idx % 100 == 0:
-            print(f'Epoch {epoch+1/num_epochs}, Loss: {running_loss/len(data_loader)}')    
+            print(f'Epoch {epoch+1}/{num_epochs}, Loss: {running_loss/len(data_loader)}')
+    avg_running_loss = running_loss/len(data_loader)
+    print(f'Epoch {epoch+1}/{num_epochs}, average loss: {avg_running_loss}')
+    torch.save(model.state_dict(), f'Checkpoint_Epoch_{epoch+1}.pth')
+    model.eval()
+    val_loss = 0.0
+    with torch.no_grad():
+        for val_surface_maps, val_precip_maps in data_loader:
+            val_surface_maps = val_surface_maps.to(device)
+            val_precip_maps = val_precip_maps.to(device)
+            val_outputs = model(val_surface_maps)
+            loss = criterion(val_outputs, val_precip_maps)
+            val_loss += loss.item()
+    avg_val_loss = val_loss/len(data_loader)
+    print(f'Validation Loss after after epoch {epoch+1}/{num_epochs}: {avg_val_loss}')
     '''
-    model.train()
+    model.train()   
     running_loss = 0.0
     for surface_maps, precip_maps in data_loader:
         optimizer.zero_grad()
