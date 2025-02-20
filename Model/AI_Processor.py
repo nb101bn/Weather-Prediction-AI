@@ -13,7 +13,7 @@ from torchvision import datasets
 import torch.nn.functional as F
 
 class CNN(nn.Module):
-    def __init__(self, num_classes = 10):
+    def __init__(self, num_classes):
         super(CNN, self).__init__()
         self.conv_layer_1 = nn.Conv2d(in_channels=3, out_channels=32, kernel_size=3, stride=1, padding=1)
         self.conv_layer_2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1)
