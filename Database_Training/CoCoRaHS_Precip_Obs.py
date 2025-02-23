@@ -7,7 +7,7 @@ from io import BytesIO
 from torch.utils.data import Dataset
 from PIL import Image
 from torchvision import transforms
-
+'''
 def CoCoRaHS_Pull(start_date, end_date):
     def download_png(url, filename):
         response = requests.get(url)
@@ -24,13 +24,12 @@ def CoCoRaHS_Pull(start_date, end_date):
 start_date = datetime.datetime(1998, 6, 15)
 end_date = datetime.datetime(2015, 12, 31)
 CoCoRaHS_Pull(start_date, end_date)
-
+'''
 class CoCoRaHS_Dataset(Dataset):
     def __init__(self, start_date, end_date, transform = None):
         self.start_date = start_date
         self.end_date = end_date
         self.transform = transform
-        self.date_list = self.create_date_list()
     
     def download_png(self, url):
         try:

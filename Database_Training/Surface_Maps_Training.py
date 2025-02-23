@@ -8,6 +8,7 @@ from PIL import Image
 from io import BytesIO
 from torchvision import transforms
 import torch
+import matplotlib.pyplot as plt
 import numpy as np
 
 def ensure_integer(value):
@@ -18,7 +19,7 @@ def ensure_integer(value):
             print('value is not an integer')
             value = int(input())
             return value
-
+'''
 def surface_map_requests():
     start_date = datetime.datetime(1985, 1, 1, 0)
     end_date = datetime.datetime(2015, 12, 31, 21)
@@ -37,16 +38,22 @@ def surface_map_requests():
         download_png(url, filename)
         start_date += datetime.timedelta(hours=3)
 surface_map_requests()
-
+'''
 class SurfaceMap_Dataset(Dataset):
-    def __init__(self, start_date, end_date, hours_back=6, transform=None):
+    def __init__(self, start_date, end_date, hours_back, transform=None):
         self.start_date = start_date
         self.end_date = end_date
         self.hours_back = hours_back
         self.transform = transform
+        plt.ioff()
     def download_png(self, url):
         response = requests.get(url)
-        img = Image.open(BytesIO(response.content))
+        if response.status_code == 200:
+            try:
+                img = Image.open(BytesIO(response.content))
+                return img
+            except PIL.UnidentifiedImageError:
+                print(f'Error')
         return img
     
     def __len__(self):

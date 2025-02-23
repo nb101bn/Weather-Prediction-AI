@@ -19,7 +19,7 @@ class CNN(nn.Module):
         self.conv_layer_2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1)
         self.conv_layer_3 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, stride=1, padding=1)
         self.relu_layer = nn.ReLU()
-        self.max_pool_layer = nn.MaxPool2d(kernel_size=2, stirde=2)
+        self.max_pool_layer = nn.MaxPool2d(kernel_size=2, stride=2)
         self.final_conv_layer = nn.Conv2d(128, 1, kernel_size=1)
 
     def forward(self, x):

@@ -2,10 +2,10 @@ import torch
 from torch.utils.data import DataLoader
 import torch.optim as optim
 import torch.nn as nn
-from Database_Training import CoCoRaHS_Precip_Obs
-from Database_Training import Surface_Maps_Training
-from Database_Training import Combined_Datasets
-from Model import AI_Processor
+from Database_Training.CoCoRaHS_Precip_Obs import CoCoRaHS_Dataset
+from Database_Training.Surface_Maps_Training import SurfaceMap_Dataset
+from Database_Training.Combined_Datasets import Combined_Datasets
+from Model.AI_Processor import CNN
 import datetime
 import matplotlib.pyplot as plt
 import numpy as np
@@ -25,12 +25,13 @@ def save_output_images(predictions, epoch, batch_idx, output_dir):
 end_date = datetime.datetime(2015, 12, 31, 21)
 start_date = datetime.datetime(1998, 6, 10, 00)
 transform = None
-precip_dataset = CoCoRaHS_Precip_Obs(start_date, end_date, transform)
-Surface_map_dataset = Surface_Maps_Training(start_date, end_date, transform)
+hours_back = 6
+precip_dataset = CoCoRaHS_Dataset(start_date, end_date, transform)
+Surface_map_dataset = SurfaceMap_Dataset(start_date, end_date, hours_back, transform)
 combined_dataset = Combined_Datasets(precip_dataset, Surface_map_dataset)
 data_loader = DataLoader(combined_dataset, batch_size=32, shuffle=True)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model = AI_Processor(num_classes = 10).to(device)
+model = CNN().to(device)
 criterion = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 num_epochs = 100
@@ -65,6 +66,7 @@ for epoch in range(num_epochs):
             val_loss += loss.item()
     avg_val_loss = val_loss/len(data_loader)
     print(f'Validation Loss after after epoch {epoch+1}/{num_epochs}: {avg_val_loss}')
+    model.train()
     '''
     model.train()   
     running_loss = 0.0
