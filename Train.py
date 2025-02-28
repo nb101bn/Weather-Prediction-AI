@@ -1,4 +1,5 @@
 import torch
+from torchvision import transforms
 from torch.utils.data import DataLoader
 import torch.optim as optim
 import torch.nn as nn
@@ -23,13 +24,13 @@ def save_output_images(predictions, epoch, batch_idx, output_dir):
         plt.close()
 
 end_date = datetime.datetime(2015, 12, 31, 21)
-start_date = datetime.datetime(1998, 6, 10, 00)
-transform = None
+start_date = datetime.datetime(2006, 1, 1, 00)
+transform = transforms.ToTensor
 hours_back = 6
 precip_dataset = CoCoRaHS_Dataset(start_date, end_date, transform)
 Surface_map_dataset = SurfaceMap_Dataset(start_date, end_date, hours_back, transform)
 combined_dataset = Combined_Datasets(precip_dataset, Surface_map_dataset)
-data_loader = DataLoader(combined_dataset, batch_size=32, shuffle=True)
+data_loader = DataLoader(combined_dataset, batch_size=8, shuffle=True, pin_memory=True)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = CNN().to(device)
 criterion = nn.MSELoss()
@@ -47,12 +48,14 @@ for epoch in range(num_epochs):
         loss = criterion(outputs, precip_maps)
         loss.backward()
         optimizer.step()
+        torch.cuda.empty_cache()
         running_loss += loss.item()
         if batch_idx % 10 == 0:
             save_output_images(outputs, epoch, batch_idx, output_dir)
         if batch_idx % 100 == 0:
             print(f'Epoch {epoch+1}/{num_epochs}, Loss: {running_loss/len(data_loader)}')
     avg_running_loss = running_loss/len(data_loader)
+    torch.save(model.state_dict(), f'Checkpoint_Epoch_{epoch+1}.pth')
     print(f'Epoch {epoch+1}/{num_epochs}, average loss: {avg_running_loss}')
     torch.save(model.state_dict(), f'Checkpoint_Epoch_{epoch+1}.pth')
     model.eval()

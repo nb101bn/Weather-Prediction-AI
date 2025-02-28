@@ -52,9 +52,12 @@ class SurfaceMap_Dataset(Dataset):
             try:
                 img = Image.open(BytesIO(response.content))
                 return img
-            except PIL.UnidentifiedImageError:
-                print(f'Error')
-        return img
+            except Image.UnidentifiedImageError:
+                print(f'Error unable to identify image at {url}')
+                return None
+        else:
+            print(f'Error: Failed to download image from {url} with status code {response.status_code}')
+            return None
     
     def __len__(self):
         return(self.end_date - self.start_date).days +1
@@ -68,9 +71,15 @@ class SurfaceMap_Dataset(Dataset):
             month = surface_date.strftime('%m')
             day = surface_date.strftime('%d')
             hour = surface_date.strftime('%H')
-            surface_url = f'https://www.wpc.ncep.noaa.gov/archives/sfc/{year}/sfc{year}{month}{day}{hour}z.gif'
+            surface_url = f'https://www.wpc.ncep.noaa.gov/archives/sfc/{year}/lrgnamsfc{year}{month}{day}{hour}.gif'
             surface_map = self.download_png(surface_url)
-            surface_maps.append(surface_map)
+            if surface_map is not None:
+                surface_map = surface_map.convert('RGB')
+                surface_maps.append(surface_map)
         if self.transform:
             surface_maps = [self.transform(sm) for sm in surface_maps]
-        return torch.stack([torch.tensor(np.array(sm)) for sm in surface_maps], dim=0)
+        if isinstance(surface_maps[0], torch.Tensor):
+            surface_maps_tensor = torch.stack(surface_maps, dim=0)
+        else:
+            raise ValueError(f'Expected Tensors but got {type(surface_maps[0])} elements')
+        return surface_maps_tensor
