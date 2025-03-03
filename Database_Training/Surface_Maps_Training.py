@@ -80,6 +80,10 @@ class SurfaceMap_Dataset(Dataset):
             surface_maps = [self.transform(sm) for sm in surface_maps]
         if isinstance(surface_maps[0], torch.Tensor):
             surface_maps_tensor = torch.stack(surface_maps, dim=0)
+            if surface_maps_tensor.shape[0] == self.hours_back:
+                return surface_maps_tensor
+            else:
+                raise ValueError(f'Expected {self.hours_back} surface maps, but got {surface_maps_tensor.shape[0]}')
         else:
             raise ValueError(f'Expected Tensors but got {type(surface_maps[0])} elements')
         return surface_maps_tensor

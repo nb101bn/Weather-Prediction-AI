@@ -48,7 +48,7 @@ class CoCoRaHS_Dataset(Dataset):
         year = date.strftime('%Y')
         month = date.strftime('%m')
         day = date.strftime('%d')
-        precip_url = f'https://www.cocorahs.org/maps/GetMap.aspx?state=usa&type=precip&date={month}/{day}/{year}&cp=0'
+        precip_url = f'https://www.wpc.ncep.noaa.gov/dailywxmap/htmlimages/precip_{year}{month}{day}.gif'
         precip_map = self.download_png(precip_url)
         
         if self.transform:
