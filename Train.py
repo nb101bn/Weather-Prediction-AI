@@ -24,7 +24,7 @@ def save_output_images(predictions, epoch, batch_idx, output_dir):
         plt.close()
 
 end_date = datetime.datetime(2015, 12, 31, 21)
-start_date = datetime.datetime(2006, 1, 1, 00)
+start_date = datetime.datetime(2015, 1, 1, 00)
 transform = transforms.ToTensor()
 hours_back = 6
 precip_dataset = CoCoRaHS_Dataset(start_date, end_date, transform)
