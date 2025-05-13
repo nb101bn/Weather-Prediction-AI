@@ -13,8 +13,7 @@ from scipy.interpolate import griddata
 # URL for fetching meteorological data.  It's good to define constants like this at the top.
 DATA_URL = ('https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py?'
             'data=all&year1=2025&month1=5&day1=1&year2=2025&month2=5&day2=8&'
-            'network=MO_ASOS&network=IL_ASOS&network=AR_ASOS&'
-            'network=KY_ASOS&network=TN_ASOS&tz=Etc%2FUTC&format=onlycomma&'
+            'network=MO_ASOS&tz=Etc%2FUTC&format=onlycomma&'
             'latlon=yes&elev=yes&missing=M&trace=T&direct=no&'
             'report_type=3&report_type=4')
 
@@ -78,7 +77,7 @@ def create_map(data):
 
 
 
-def interpolate_to_grid(lons, lats, u_wind, v_wind, resolution=3000):
+def wind_interpolate_to_grid(lons, lats, u_wind, v_wind, resolution=3000):
     """
     Interpolates wind components (u, v) to a regular grid using scipy.interpolate.griddata.
 
@@ -161,7 +160,7 @@ def station_wind(ax, data, date):
             u, v = mpcalc.wind_components(wind_speed, wind_direction)
 
             # Interpolate to grid
-            grid_lon, grid_lat, grid_u, grid_v = interpolate_to_grid(flon, flat, u, v)
+            grid_lon, grid_lat, grid_u, grid_v = wind_interpolate_to_grid(flon, flat, u, v)
             if grid_lon is not None and grid_lat is not None and grid_u is not None and grid_v is not None:
                 # Plot the interpolated wind vectors
                 ax.barbs(grid_lon, grid_lat, grid_u, grid_v,
@@ -179,6 +178,88 @@ def station_wind(ax, data, date):
         print('Dataframe for speed or direction is empty, check dataset')
         return None
 
+def dewpoint_interpolation(lon, lat, dp, resolution=30000):
+    try:
+        min_lon, max_lon = np.min(lon), np.max(lon)
+        min_lat, max_lat = np.min(lat), np.max(lat)
+        # 2. Create a regular grid.
+        deg_per_km = 1 / 111.0  # 1 degree ≈ 111 km
+        grid_res_deg = resolution * deg_per_km / 1000  # km to deg
+        grid_lon, grid_lat = np.mgrid[min_lon:max_lon:grid_res_deg,
+                                    min_lat:max_lat:grid_res_deg]
+
+        # 3. Interpolate the wind components to the grid.
+        points = np.column_stack((lon, lat))
+        grid_dp = griddata(points, dp, (grid_lon, grid_lat), method='linear')
+        return grid_lon, grid_lat, grid_dp
+    except Exception as e:
+        print(f"Error interpolating the data: {e}")
+        return None, None, None
+
+
+
+def station_dew_point(ax, data, date):
+    if date is not None:
+        try:
+            start_date = date
+            end_date = date + datetime.timedelta(minutes=59)
+            data['valid'] = pd.to_datetime(data['valid'])
+            filtered_df = data[(data['valid'] >= start_date) & (data['valid'] <= end_date)]
+            filtered_df_unique = filtered_df.drop_duplicates(subset='station', keep='first')
+        except Exception as e:
+            print(f"Error filtering the dataframe: {e}")
+            return ax
+    else:
+        print("date is empty please enter a propper date.")
+        return ax
+    try:
+        dewpoint = pd.to_numeric(filtered_df_unique['dwpf'], errors='coerce')
+        flat = filtered_df_unique['lat'].values
+        flon = filtered_df_unique['lon'].values
+        dewpoint.fillna(0, inplace=True)
+        dewpoint.replace('M', 0)
+        dewpoint.values
+    except Exception as e:
+        print(f"Error parsing values: {e}")
+        return ax
+    grid_lon, grid_lat, dews = dewpoint_interpolation(flon, flat, dewpoint)
+    if grid_lon is not None and grid_lat is not None and dews is not None:
+        try:        
+            for lon_idx, lat_idx in np.ndindex(dews.shape):
+                value = dews[lon_idx, lat_idx]
+                lon = grid_lon[lon_idx, lat_idx]
+                lat = grid_lat[lon_idx, lat_idx]
+                if not np.isnan(value):
+                    ax.text(lon, lat, f"{value:.1f}",
+                            color="blue",
+                            transform=ccrs.PlateCarree(),
+                            fontsize=6,
+                            ha='center',
+                            va='center',
+                            zorder=5)
+        except Exception as e:
+            print(f'Error plotting the interpolated dewpoints: {e}')
+    else:
+        print(f"Either Grid_lon, Grid_lat, or Dews is missing or nan")
+    
+    try:
+        for lon, lat, value in zip(flon, flat, dewpoint):
+            if not np.isnan(value):
+                ax.text(lon, lat,
+                        f"{value:.1f}", 
+                        color='green', 
+                        transform=ccrs.PlateCarree(), 
+                        fontsize=6, 
+                        ha='center', 
+                        va='center', 
+                        zorder=5)
+            else:
+                print(f"Value is either nan or empty please input an actual value")
+                return None
+    except Exception as e:
+        print(f"Error plotting dewpoint {e}")
+        return None
+    return ax
 
 
 def main():
@@ -195,7 +276,7 @@ def main():
     analysis_date = datetime.datetime(2025, 5, 5, 0, 0) # Changed from date to analysis_date
     map_axis = create_map(data_frame) # Changed from axis to map_axis
     if map_axis is not None:
-        station_wind(map_axis, data_frame, analysis_date)
+        station_dew_point(map_axis, data_frame, analysis_date)
         plt.show()  # Display the plot
     else:
         print('Error creating map. Exiting.')
