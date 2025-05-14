@@ -179,52 +179,109 @@ def station_wind(ax, data, date):
         return None
 
 def dewpoint_interpolation(lon, lat, dp, resolution=30000):
+    """
+    Interpolates dewpoint values onto a regular grid.
+
+    Args:
+        lon (np.ndarray): 1D array of longitudes of the data points.
+        lat (np.ndarray): 1D array of latitudes of the data points.
+        dp (np.ndarray): 1D array of dewpoint values corresponding to the lon/lat points.
+        resolution (int, optional): Target resolution of the grid in meters. Defaults to 30000.
+
+    Returns:
+        tuple (np.ndarray, np.ndarray, np.ndarray):
+            - grid_lon: 2D array of longitudes of the interpolated grid.
+            - grid_lat: 2D array of latitudes of the interpolated grid.
+            - grid_dp: 2D array of interpolated dewpoint values on the grid.
+            Returns (None, None, None) if an error occurs during interpolation.
+    """
     try:
+        # Find the minimum and maximum longitude and latitude to define the grid boundaries.
         min_lon, max_lon = np.min(lon), np.max(lon)
         min_lat, max_lat = np.min(lat), np.max(lat)
-        # 2. Create a regular grid.
-        deg_per_km = 1 / 111.0  # 1 degree ≈ 111 km
-        grid_res_deg = resolution * deg_per_km / 1000  # km to deg
-        grid_lon, grid_lat = np.mgrid[min_lon:max_lon:grid_res_deg,
-                                    min_lat:max_lat:grid_res_deg]
 
-        # 3. Interpolate the wind components to the grid.
+        # Calculate the grid resolution in degrees based on the desired resolution in meters.
+        deg_per_km = 1 / 111.0  # Approximate degrees per kilometer.
+        grid_res_deg = resolution * deg_per_km / 1000  # Convert meters to degrees.
+
+        # Create a 2D regular grid of longitudes and latitudes.
+        grid_lon, grid_lat = np.mgrid[min_lon:max_lon:grid_res_deg,
+                                        min_lat:max_lat:grid_res_deg]
+
+        # Stack the original longitude and latitude points into a single array.
         points = np.column_stack((lon, lat))
+
+        # Interpolate the dewpoint values onto the new grid using linear interpolation.
         grid_dp = griddata(points, dp, (grid_lon, grid_lat), method='linear')
+
         return grid_lon, grid_lat, grid_dp
+
     except Exception as e:
         print(f"Error interpolating the data: {e}")
         return None, None, None
 
-
-
 def station_dew_point(ax, data, date):
+    """
+    Plots station dewpoint values and contours of interpolated dewpoints on a map axis.
+
+    Args:
+        ax (cartopy.mpl.geoaxes.GeoAxesSubplot): The map axis to plot on.
+        data (pd.DataFrame): DataFrame containing station data with 'valid' (datetime),
+                             'station' (str), 'dwpf' (numeric or 'M'), 'lat' (numeric),
+                             and 'lon' (numeric) columns.
+        date (datetime.datetime): The specific date and time for which to plot the data.
+
+    Returns:
+        cartopy.mpl.geoaxes.GeoAxesSubplot: The modified map axis. Returns None if an error occurs
+                                             during station value plotting.
+    """
     if date is not None:
         try:
+            # Define the start and end times for filtering the data (one-hour window).
             start_date = date
             end_date = date + datetime.timedelta(minutes=59)
+
+            # Ensure the 'valid' column is in datetime format.
             data['valid'] = pd.to_datetime(data['valid'])
+
+            # Filter the DataFrame to include data within the specified time window.
             filtered_df = data[(data['valid'] >= start_date) & (data['valid'] <= end_date)]
+
+            # Remove duplicate stations, keeping the first observation.
             filtered_df_unique = filtered_df.drop_duplicates(subset='station', keep='first')
+
         except Exception as e:
             print(f"Error filtering the dataframe: {e}")
             return ax
     else:
-        print("date is empty please enter a propper date.")
+        print("date is empty please enter a proper date.")
         return ax
+
     try:
+        # Extract dewpoint, latitude, and longitude values from the filtered DataFrame.
         dewpoint = pd.to_numeric(filtered_df_unique['dwpf'], errors='coerce')
         flat = filtered_df_unique['lat'].values
         flon = filtered_df_unique['lon'].values
+
+        # Fill any NaN values in the dewpoint series with 0.
         dewpoint.fillna(0, inplace=True)
-        dewpoint.replace('M', 0)
+
+        # Replace any 'M' (missing) values in the dewpoint series with 0.
+        dewpoint = dewpoint.replace('M', 0)
+
+        # Ensure dewpoint is a NumPy array.
         dewpoint.values
+
     except Exception as e:
         print(f"Error parsing values: {e}")
         return ax
+
+    # Interpolate dewpoint values onto a regular grid.
     grid_lon, grid_lat, dews = dewpoint_interpolation(flon, flat, dewpoint)
+
     if grid_lon is not None and grid_lat is not None and dews is not None:
-        try:        
+        try:
+            # Plot the interpolated dewpoint values as text on the map.
             for lon_idx, lat_idx in np.ndindex(dews.shape):
                 value = dews[lon_idx, lat_idx]
                 lon = grid_lon[lon_idx, lat_idx]
@@ -239,40 +296,50 @@ def station_dew_point(ax, data, date):
                             zorder=5)
         except Exception as e:
             print(f'Error plotting the interpolated dewpoints: {e}')
+
         try:
+            # Ensure the interpolated dewpoints array is of float type for contouring.
             dews = np.array(dews, dtype=float)
-        except Exception as e:
-            print(f"Error converting dews to type float: {e}")
-        try:
+
+            # Calculate the minimum and maximum interpolated dewpoint values, ignoring NaNs.
             min_dews = np.nanmin(dews)
             max_dews = np.nanmax(dews)
+
+            # Generate contour levels every 5 units within the range of the data.
             contour_levels = np.arange(np.floor(min_dews/5)*5, np.ceil(max_dews/5)*5+1, 5)
-            print(contour_levels)
+            print(f"Contour Levels: {contour_levels}") # For debugging purposes
+
+            # Plot the dewpoint contours on the map.
             contour = ax.contour(grid_lon, grid_lat, dews, levels=contour_levels,
-                                   colors='black', linewidths=1, transform=ccrs.PlateCarree())
+                                colors='black', linewidths=1, transform=ccrs.PlateCarree())
+
+            # Add labels to the contour lines.
             ax.clabel(contour, inline=True, fontsize=5, fmt="%1.0f")
+
         except Exception as e:
             print(f"Error plotting contours for interpolated dewpoints: {e}")
     else:
         print(f"Either Grid_lon, Grid_lat, or Dews is missing or nan")
-    
+
     try:
+        # Plot the actual dewpoint values from the stations as text on the map.
         for lon, lat, value in zip(flon, flat, dewpoint):
             if not np.isnan(value):
                 ax.text(lon, lat,
-                        f"{value:.1f}", 
-                        color='green', 
-                        transform=ccrs.PlateCarree(), 
-                        fontsize=6, 
-                        ha='center', 
-                        va='center', 
+                        f"{value:.1f}",
+                        color='green',
+                        transform=ccrs.PlateCarree(),
+                        fontsize=6,
+                        ha='center',
+                        va='center',
                         zorder=5)
             else:
                 print(f"Value is either nan or empty please input an actual value")
-                return None
+                return None # Consider if you want to return here or continue plotting other stations
     except Exception as e:
         print(f"Error plotting dewpoint {e}")
         return None
+
     return ax
 
 
