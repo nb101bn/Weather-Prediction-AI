@@ -77,7 +77,7 @@ def create_map(data):
 
 
 
-def wind_interpolate_to_grid(lons, lats, u_wind, v_wind, resolution=3000):
+def wind_interpolate_to_grid(lons, lats, u_wind, v_wind, resolution=30000):
     """
     Interpolates wind components (u, v) to a regular grid using scipy.interpolate.griddata.
 
@@ -239,6 +239,20 @@ def station_dew_point(ax, data, date):
                             zorder=5)
         except Exception as e:
             print(f'Error plotting the interpolated dewpoints: {e}')
+        try:
+            dews = np.array(dews, dtype=float)
+        except Exception as e:
+            print(f"Error converting dews to type float: {e}")
+        try:
+            min_dews = np.nanmin(dews)
+            max_dews = np.nanmax(dews)
+            contour_levels = np.arange(np.floor(min_dews/5)*5, np.ceil(max_dews/5)*5+1, 5)
+            print(contour_levels)
+            contour = ax.contour(grid_lon, grid_lat, dews, levels=contour_levels,
+                                   colors='black', linewidths=1, transform=ccrs.PlateCarree())
+            ax.clabel(contour, inline=True, fontsize=5, fmt="%1.0f")
+        except Exception as e:
+            print(f"Error plotting contours for interpolated dewpoints: {e}")
     else:
         print(f"Either Grid_lon, Grid_lat, or Dews is missing or nan")
     
