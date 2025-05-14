@@ -461,6 +461,51 @@ def station_temperature(ax, data, date):
 
     return ax
 
+def station_pressure(ax, data, date):
+    if date is not None:
+        try:
+            start_date = date
+            end_date = date+ datetime.timedelta(minutes=59)
+            data['valid'] = pd.to_datetime(data['valid'])
+            filtered_df = data[(data['valid']>=start_date)&(data['valid']<=end_date)]
+            filtered_df_unique = filtered_df.drop_duplicates(subset='station', keep='first')
+        except Exception as e:
+            print(f"Error filtering data: {e} \n please try again.")
+            return ax
+    else:
+        print(f"Error date is either empty or nan please enter a valid date.")
+        return ax
+    try:
+        pressure = pd.to_numeric(filtered_df_unique['mslp'], errors='coerce')
+        flon = filtered_df_unique['lon'].values
+        flat = filtered_df_unique['lat'].values
+        pressure.fillna(1000, inplace=True)
+        pressure = pressure.replace('M', 1000)
+        pressure.values
+    except Exception as e:
+        print(f"Error gathering variables {e}")
+        return ax
+    # Interpolate pressure data
+    grid_lon, grid_lat, grid_pressure = templike_interpolation(flon, flat, pressure, resolution=3000)
+
+    if grid_lon is not None and grid_lat is not None and grid_pressure is not None:
+        try:
+            min_pressure = np.nanmin(grid_pressure)
+            max_pressure = np.nanmax(grid_pressure)
+            contour_levels = np.arange(np.floor(min_pressure / 4) * 4, np.ceil(max_pressure / 4) * 4 + 1, 4) # Adjust interval as needed
+            contour = ax.contour(grid_lon, grid_lat, grid_pressure, levels=contour_levels,
+                                colors='black', linewidths=1, transform=ccrs.PlateCarree())
+            ax.clabel(contour, inline=True, fontsize=5, fmt="%1.0f")
+        except Exception as e:
+            print(f"Error contouring pressure lines: {e}")
+            return None
+    else:
+        print("Error during pressure interpolation, cannot contour.")
+        return None
+
+    return ax
+
+
 def main():
     """
     Main function to orchestrate the data retrieval, processing, and plotting.
@@ -475,7 +520,7 @@ def main():
     analysis_date = datetime.datetime(2025, 5, 5, 0, 0) # Changed from date to analysis_date
     map_axis = create_map(data_frame) # Changed from axis to map_axis
     if map_axis is not None:
-        station_temperature(map_axis, data_frame, analysis_date)
+        station_pressure(map_axis, data_frame, analysis_date)
         plt.show()  # Display the plot
     else:
         print('Error creating map. Exiting.')
