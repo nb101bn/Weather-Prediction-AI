@@ -178,7 +178,7 @@ def station_wind(ax, data, date):
         print('Dataframe for speed or direction is empty, check dataset')
         return None
 
-def dewpoint_interpolation(lon, lat, dp, resolution=30000):
+def templike_interpolation(lon, lat, T, resolution=30000):
     """
     Interpolates dewpoint values onto a regular grid.
 
@@ -212,9 +212,9 @@ def dewpoint_interpolation(lon, lat, dp, resolution=30000):
         points = np.column_stack((lon, lat))
 
         # Interpolate the dewpoint values onto the new grid using linear interpolation.
-        grid_dp = griddata(points, dp, (grid_lon, grid_lat), method='linear')
+        grid_T = griddata(points, T, (grid_lon, grid_lat), method='linear')
 
-        return grid_lon, grid_lat, grid_dp
+        return grid_lon, grid_lat, grid_T
 
     except Exception as e:
         print(f"Error interpolating the data: {e}")
@@ -277,7 +277,7 @@ def station_dew_point(ax, data, date):
         return ax
 
     # Interpolate dewpoint values onto a regular grid.
-    grid_lon, grid_lat, dews = dewpoint_interpolation(flon, flat, dewpoint)
+    grid_lon, grid_lat, dews = templike_interpolation(flon, flat, dewpoint)
 
     if grid_lon is not None and grid_lat is not None and dews is not None:
         try:
@@ -342,6 +342,86 @@ def station_dew_point(ax, data, date):
 
     return ax
 
+def station_temperature(ax, data, date):
+    if date is not None:
+        try:
+            start_date = date
+            end_date = date + datetime.timedelta(minutes=59)
+            data['valid'] = pd.to_datetime(data['valid'])
+            filtered_df = data[(data['valid']>=start_date)&(data['valid']<=end_date)]
+            filtered_df_unique = filtered_df.drop_duplicates(subset='station', keep='first')
+        except Exception as e:
+            print(f"Error filtering the dataframe: {e}")
+            return ax
+    else:
+        print("Date is either nan or empty")
+        return ax
+    try:
+        temp = pd.to_numeric(filtered_df_unique['tmpf'], errors='coerce')
+        flon = filtered_df_unique['lon']
+        flat = filtered_df_unique['lat']
+        temp.fillna(0, inplace=True)
+        temp.replace('M', 0)
+        temp.values
+    except Exception as e:
+        print(f"Error gathering temperature, lon, and lat values from Filtered dataset: \n {e}")
+        return ax
+    grid_lon, grid_lat, grid_temp = templike_interpolation(flon, flat, temp)
+    if grid_lon is not None and grid_lat is not None and grid_temp is not None:
+        try:
+            # Plot the interpolated dewpoint values as text on the map.
+            for lon_idx, lat_idx in np.ndindex(grid_temp.shape):
+                value = grid_temp[lon_idx, lat_idx]
+                lon = grid_lon[lon_idx, lat_idx]
+                lat = grid_lat[lon_idx, lat_idx]
+                if not np.isnan(value):
+                    ax.text(lon, lat, f"{value:.1f}",
+                            color="red" if value>=33 else "blue",
+                            transform=ccrs.PlateCarree(),
+                            fontsize=6,
+                            ha='center',
+                            va='center',
+                            zorder=5)
+        except Exception as e:
+            print(f'Error plotting the interpolated dewpoints: {e}')
+        try:
+            # Ensure the interpolated dewpoints array is of float type for contouring.
+            grid_temp = np.array(grid_temp, dtype=float)
+
+            # Calculate the minimum and maximum interpolated dewpoint values, ignoring NaNs.
+            min_dews = np.nanmin(grid_temp)
+            max_dews = np.nanmax(grid_temp)
+
+            # Generate contour levels every 5 units within the range of the data.
+            contour_levels = np.arange(np.floor(min_dews/5)*5, np.ceil(max_dews/5)*5+1, 5)
+            print(f"Contour Levels: {contour_levels}") # For debugging purposes
+
+            # Plot the dewpoint contours on the map.
+            contour = ax.contour(grid_lon, grid_lat, grid_temp, levels=contour_levels,
+                                colors='black', linewidths=1, transform=ccrs.PlateCarree())
+
+            # Add labels to the contour lines.
+            ax.clabel(contour, inline=True, fontsize=5, fmt="%1.0f")
+
+        except Exception as e:
+            print(f"Error plotting contours for interpolated dewpoints: {e}")
+
+    try:
+        for lon, lat, value in zip(flon, flat, temp):
+            if not np.isnan(value):
+                ax.text(lon, lat, f"{value:.1f}",
+                        color='red' if value >= 33 else 'blue',
+                        transform=ccrs.PlateCarree(),
+                        fontsize=6,
+                        ha='center',
+                        va='center',
+                        zorder=5)
+            else:
+                print('Error plotting temperature values, either lon, lat, or value is nan or empty')
+                return None
+    except Exception as e:
+        print(f'Error converting or plotting temperature: {e}')
+        return None
 
 def main():
     """
@@ -357,7 +437,7 @@ def main():
     analysis_date = datetime.datetime(2025, 5, 5, 0, 0) # Changed from date to analysis_date
     map_axis = create_map(data_frame) # Changed from axis to map_axis
     if map_axis is not None:
-        station_dew_point(map_axis, data_frame, analysis_date)
+        station_temperature(map_axis, data_frame, analysis_date)
         plt.show()  # Display the plot
     else:
         print('Error creating map. Exiting.')
