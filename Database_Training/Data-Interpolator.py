@@ -343,60 +343,95 @@ def station_dew_point(ax, data, date):
     return ax
 
 def station_temperature(ax, data, date):
+    """
+    Plots station temperature values and contours of interpolated temperatures on a map axis.
+
+    Args:
+        ax (cartopy.mpl.geoaxes.GeoAxesSubplot): The map axis to plot on.
+        data (pd.DataFrame): DataFrame containing station data with 'valid' (datetime),
+                             'station' (str), 'tmpf' (numeric or 'M'), 'lat' (numeric),
+                             and 'lon' (numeric) columns.
+        date (datetime.datetime): The specific date and time for which to plot the data.
+
+    Returns:
+        cartopy.mpl.geoaxes.GeoAxesSubplot: The modified map axis. Returns None if an error occurs
+                                             during station value plotting.
+    """
     if date is not None:
         try:
+            # Define the start and end times for filtering the data (one-hour window).
             start_date = date
             end_date = date + datetime.timedelta(minutes=59)
+
+            # Ensure the 'valid' column is in datetime format.
             data['valid'] = pd.to_datetime(data['valid'])
-            filtered_df = data[(data['valid']>=start_date)&(data['valid']<=end_date)]
+
+            # Filter the DataFrame to include data within the specified time window.
+            filtered_df = data[(data['valid'] >= start_date) & (data['valid'] <= end_date)]
+
+            # Remove duplicate stations, keeping the first observation.
             filtered_df_unique = filtered_df.drop_duplicates(subset='station', keep='first')
+
         except Exception as e:
             print(f"Error filtering the dataframe: {e}")
             return ax
     else:
         print("Date is either nan or empty")
         return ax
+
     try:
+        # Extract temperature, longitude, and latitude values from the filtered DataFrame.
         temp = pd.to_numeric(filtered_df_unique['tmpf'], errors='coerce')
         flon = filtered_df_unique['lon']
         flat = filtered_df_unique['lat']
+
+        # Fill any NaN values in the temperature series with 0.
         temp.fillna(0, inplace=True)
-        temp.replace('M', 0)
+
+        # Replace any 'M' (missing) values in the temperature series with 0.
+        temp = temp.replace('M', 0)
+
+        # Ensure temperature is a NumPy array.
         temp.values
+
     except Exception as e:
         print(f"Error gathering temperature, lon, and lat values from Filtered dataset: \n {e}")
         return ax
+
+    # Interpolate temperature values onto a regular grid.
     grid_lon, grid_lat, grid_temp = templike_interpolation(flon, flat, temp)
+
     if grid_lon is not None and grid_lat is not None and grid_temp is not None:
         try:
-            # Plot the interpolated dewpoint values as text on the map.
+            # Plot the interpolated temperature values as text on the map.
             for lon_idx, lat_idx in np.ndindex(grid_temp.shape):
                 value = grid_temp[lon_idx, lat_idx]
                 lon = grid_lon[lon_idx, lat_idx]
                 lat = grid_lat[lon_idx, lat_idx]
                 if not np.isnan(value):
                     ax.text(lon, lat, f"{value:.1f}",
-                            color="red" if value>=33 else "blue",
+                            color="red" if value >= 33 else "blue",
                             transform=ccrs.PlateCarree(),
                             fontsize=6,
                             ha='center',
                             va='center',
                             zorder=5)
         except Exception as e:
-            print(f'Error plotting the interpolated dewpoints: {e}')
+            print(f'Error plotting the interpolated temperatures: {e}')
+
         try:
-            # Ensure the interpolated dewpoints array is of float type for contouring.
+            # Ensure the interpolated temperature array is of float type for contouring.
             grid_temp = np.array(grid_temp, dtype=float)
 
-            # Calculate the minimum and maximum interpolated dewpoint values, ignoring NaNs.
-            min_dews = np.nanmin(grid_temp)
-            max_dews = np.nanmax(grid_temp)
+            # Calculate the minimum and maximum interpolated temperature values, ignoring NaNs.
+            min_temp = np.nanmin(grid_temp)
+            max_temp = np.nanmax(grid_temp)
 
             # Generate contour levels every 5 units within the range of the data.
-            contour_levels = np.arange(np.floor(min_dews/5)*5, np.ceil(max_dews/5)*5+1, 5)
+            contour_levels = np.arange(np.floor(min_temp/5)*5, np.ceil(max_temp/5)*5+1, 5)
             print(f"Contour Levels: {contour_levels}") # For debugging purposes
 
-            # Plot the dewpoint contours on the map.
+            # Plot the temperature contours on the map.
             contour = ax.contour(grid_lon, grid_lat, grid_temp, levels=contour_levels,
                                 colors='black', linewidths=1, transform=ccrs.PlateCarree())
 
@@ -404,9 +439,10 @@ def station_temperature(ax, data, date):
             ax.clabel(contour, inline=True, fontsize=5, fmt="%1.0f")
 
         except Exception as e:
-            print(f"Error plotting contours for interpolated dewpoints: {e}")
+            print(f"Error plotting contours for interpolated temperatures: {e}")
 
     try:
+        # Plot the actual temperature values from the stations as text on the map.
         for lon, lat, value in zip(flon, flat, temp):
             if not np.isnan(value):
                 ax.text(lon, lat, f"{value:.1f}",
@@ -418,10 +454,12 @@ def station_temperature(ax, data, date):
                         zorder=5)
             else:
                 print('Error plotting temperature values, either lon, lat, or value is nan or empty')
-                return None
+                return None # Consider if you want to return here or continue plotting other stations
     except Exception as e:
         print(f'Error converting or plotting temperature: {e}')
         return None
+
+    return ax
 
 def main():
     """
