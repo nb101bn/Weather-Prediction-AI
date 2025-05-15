@@ -128,6 +128,10 @@ def station_wind(ax, data, date):
             data['valid'] = pd.to_datetime(data['valid'])
             filtered_df = data[(data['valid'] >= start_date) & (data['valid'] <= end_date)]
             filtered_df_unique = filtered_df.drop_duplicates(subset='station', keep='first')
+            filtered_df_unique = filtered_df_unique[filtered_df_unique['sknt'].notna()]
+            filtered_df_unique = filtered_df_unique[filtered_df_unique['drct'] != 'M']
+            filtered_df_unique = filtered_df_unique[filtered_df_unique['drct'].notna()]
+            filtered_df_unique = filtered_df_unique[filtered_df_unique['sknt'] != 'M']
         except Exception as e:
             print(f'Error filtering data set {e}')
             return None
@@ -242,6 +246,8 @@ def station_dew_point(ax, data, date):
 
             # Remove duplicate stations, keeping the first observation.
             filtered_df_unique = filtered_df.drop_duplicates(subset='station', keep='first')
+            filtered_df_unique = filtered_df_unique[filtered_df_unique['dwpf'].notna()]
+            filtered_df_unique = filtered_df_unique[filtered_df_unique['dwpf'] != 'M']
 
         except Exception as e:
             print(f"Error filtering the dataframe: {e}")
@@ -364,6 +370,8 @@ def station_temperature(ax, data, date):
 
             # Remove duplicate stations, keeping the first observation.
             filtered_df_unique = filtered_df.drop_duplicates(subset='station', keep='first')
+            filtered_df_unique = filtered_df_unique[filtered_df_unique['tmpf'].notna()]
+            filtered_df_unique = filtered_df_unique[filtered_df_unique['tmpf'] != 'M']
 
         except Exception as e:
             print(f"Error filtering the dataframe: {e}")
@@ -462,6 +470,8 @@ def station_pressure(ax, data, date):
             data['valid'] = pd.to_datetime(data['valid'])
             filtered_df = data[(data['valid']>=start_date)&(data['valid']<=end_date)]
             filtered_df_unique = filtered_df.drop_duplicates(subset='station', keep='first')
+            filtered_df_unique = filtered_df_unique[filtered_df_unique['mslp'].notna()]
+            filtered_df_unique = filtered_df_unique[filtered_df_unique['mslp'] != 'M']
         except Exception as e:
             print(f"Error filtering data: {e} \n please try again.")
             return ax
@@ -501,13 +511,13 @@ def station_pressure(ax, data, date):
 
 def main():
     
-    analysis_date = datetime.datetime(2024, 5, 5, 0, 0) # Changed from date to analysis_date
+    analysis_date = datetime.datetime(2025, 5, 5, 0, 0) # Changed from date to analysis_date
     
     # URL for fetching meteorological data.  It's good to define constants like this at the top.
     DATA_URL = ('https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py?'
                 f'data=all&year1={analysis_date.strftime('%Y')}&month1={analysis_date.strftime('%m')}&day1={analysis_date.strftime('%d')}'
                 f'&year2={analysis_date.strftime('%Y')}&month2={analysis_date.strftime('%m')}&day2={analysis_date.strftime('%d')}&'
-                'network=MO_ASOS&network=IA_ASOS&tz=Etc%2FUTC&format=onlycomma&'
+                'network=MO_ASOS&network=IA_ASOS&network=AR_ASOS&tz=Etc%2FUTC&format=onlycomma&'
                 'latlon=yes&elev=yes&missing=M&trace=T&direct=no&'
                 'report_type=3&report_type=4')
     
