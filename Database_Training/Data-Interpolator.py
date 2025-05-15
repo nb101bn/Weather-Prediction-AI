@@ -10,13 +10,6 @@ from metpy.units import units
 import datetime
 from scipy.interpolate import griddata
 
-# URL for fetching meteorological data.  It's good to define constants like this at the top.
-DATA_URL = ('https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py?'
-            'data=all&year1=2025&month1=5&day1=1&year2=2025&month2=5&day2=8&'
-            'network=MO_ASOS&tz=Etc%2FUTC&format=onlycomma&'
-            'latlon=yes&elev=yes&missing=M&trace=T&direct=no&'
-            'report_type=3&report_type=4')
-
 
 def create_dataframe(url):
     """
@@ -492,7 +485,7 @@ def station_pressure(ax, data, date):
         try:
             min_pressure = np.nanmin(grid_pressure)
             max_pressure = np.nanmax(grid_pressure)
-            contour_levels = np.arange(np.floor(min_pressure / 4) * 4, np.ceil(max_pressure / 4) * 4 + 1, 4) # Adjust interval as needed
+            contour_levels = np.arange(np.floor(min_pressure / 6) * 6, np.ceil(max_pressure / 6) * 6 + 1, 6) # Adjust interval as needed
             contour = ax.contour(grid_lon, grid_lat, grid_pressure, levels=contour_levels,
                                 colors='black', linewidths=1, transform=ccrs.PlateCarree())
             ax.clabel(contour, inline=True, fontsize=5, fmt="%1.0f")
@@ -507,6 +500,17 @@ def station_pressure(ax, data, date):
 
 
 def main():
+    
+    analysis_date = datetime.datetime(2024, 5, 5, 0, 0) # Changed from date to analysis_date
+    
+    # URL for fetching meteorological data.  It's good to define constants like this at the top.
+    DATA_URL = ('https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py?'
+                f'data=all&year1={analysis_date.strftime('%Y')}&month1={analysis_date.strftime('%m')}&day1={analysis_date.strftime('%d')}'
+                f'&year2={analysis_date.strftime('%Y')}&month2={analysis_date.strftime('%m')}&day2={analysis_date.strftime('%d')}&'
+                'network=MO_ASOS&network=IA_ASOS&tz=Etc%2FUTC&format=onlycomma&'
+                'latlon=yes&elev=yes&missing=M&trace=T&direct=no&'
+                'report_type=3&report_type=4')
+    
     """
     Main function to orchestrate the data retrieval, processing, and plotting.
     """
@@ -516,8 +520,6 @@ def main():
     else:
         print('No data in DataFrame. Exiting.')
         return  # Exit if no data
-
-    analysis_date = datetime.datetime(2025, 5, 5, 0, 0) # Changed from date to analysis_date
     map_axis = create_map(data_frame) # Changed from axis to map_axis
     if map_axis is not None:
         station_pressure(map_axis, data_frame, analysis_date)
