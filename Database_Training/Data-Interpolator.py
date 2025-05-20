@@ -9,6 +9,7 @@ import metpy.calc as mpcalc
 from metpy.units import units
 import datetime
 from scipy.interpolate import griddata
+from torch.utils.data import Dataset
 
 
 def create_dataframe(url):
@@ -509,7 +510,7 @@ def station_pressure(ax, data, date):
     return ax
 
 
-def main():
+#def main():
     
     analysis_date = datetime.datetime(2025, 5, 5, 0, 0) # Changed from date to analysis_date
     
@@ -539,5 +540,97 @@ def main():
 
 
 
-if __name__ == "__main__":
+#if __name__ == "__main__":
     main()  # Call the main function to start the script.
+class SFC_datafetcher():
+    
+    def __init__(self, time: datetime.datetime):
+        self.time = time
+ 
+    def fetch_data(self) -> pd.DataFrame | None:
+        try:
+            year = self.time.strftime('%Y')
+            month = self.time.strftime('%m')
+            day = self.time.strftime('%d')
+            url = ('https://mesonet.agron.iastate.edu/cgi-bin/request/asos.py?'
+                f'data=all&year1={year}&month1={month}&day1={day}'
+                f'&year2={year}&month2={month}&day2={day}&'
+                'network=MO_ASOS&network=IA_ASOS&network=AR_ASOS&tz=Etc%2FUTC&format=onlycomma&'
+                'latlon=yes&elev=yes&missing=M&trace=T&direct=no&'
+                'report_type=3&report_type=4')
+            response = requests.get(url)
+            response.raise_for_status()  # Raise an exception for bad status codes
+            df = pd.read_csv(io.StringIO(response.text))
+            return df
+        except requests.exceptions.RequestException as e:
+            print(f'Error fetching data from URL: {e}')
+            return None
+        except pd.errors.EmptyDataError as e:
+            print(f"Error: No data found at URL: {e}")
+            return None
+        except Exception as e:
+            print(f'Error converting to DataFrame: {e}')
+            return None
+class DataFilter:
+
+    def __init__(
+        self,
+        dataframe: pd.DataFrame,
+        time: datetime.datetime,
+        filter_by_station: bool = True,  # More descriptive name
+        filter_by_day: int = 0,  # Use 0 instead of False
+        filter_by_hour: int = 0, # Use 0 instead of False
+        filter_by_minute: int = 0 # Use 0 instead of False
+    ):
+        self.data = dataframe.copy()  # Important: Create a copy!
+        self.time = time
+        self.filter_by_station = filter_by_station
+        self.filter_by_day = filter_by_day
+        self.filter_by_hour = filter_by_hour
+        self.filter_by_minute = filter_by_minute
+        self.filtered_data = None  # Initialize as None
+        self._filter_data()  # Perform filtering in the constructor
+
+    def _filter_data(self):
+        """Internal method to apply the filtering logic."""
+
+        data = self.data
+        start_date = self.time
+        end_date = self.time
+
+        if self.filter_by_day > 0:
+            end_date += datetime.timedelta(days=self.filter_by_day)
+        if self.filter_by_hour > 0:
+            end_date += datetime.timedelta(hours=self.filter_by_hour)
+        if self.filter_by_minute > 0:
+            end_date += datetime.timedelta(minutes=self.filter_by_minute)
+
+        try:
+            data['valid'] = pd.to_datetime(data['valid'])
+            filtered_data = data[(data['valid'] >= start_date) & (data['valid'] <= end_date)]
+        except Exception as e:
+            print(f'Error filtering the data: {e} \n Please correct the error and try again.')
+            return
+
+        if self.filter_by_station and filtered_data is not None and not filtered_data.empty:
+            try:
+                self.filtered_data = filtered_data.drop_duplicates(subset='station', keep='first')
+            except Exception as e:
+                print(f'Error filtering stations: {e} \n Returning unfiltered data.')
+                self.filtered_data = filtered_data
+        else:
+            self.filtered_data = filtered_data
+
+        if filtered_data is None or filtered_data.empty and (self.filter_by_day > 0 or self.filter_by_hour > 0 or self.filter_by_minute > 0):
+          print('No data found within the specified time range.')
+
+    def get_filtered_data(self) -> pd.DataFrame | None:
+        """Method to access the filtered data."""
+        return self.filtered_data
+
+
+analysis_date = datetime.datetime(2025, 5, 5, 0, 0)
+dataframe = SFC_datafetcher(analysis_date).fetch_data()
+print(dataframe.head)
+filtered_data = DataFilter(dataframe, analysis_date, filter_by_minute=59).get_filtered_data()
+print(filtered_data.head)
