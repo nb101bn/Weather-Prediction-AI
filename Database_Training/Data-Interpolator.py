@@ -571,7 +571,7 @@ class SFC_datafetcher():
         except Exception as e:
             print(f'Error converting to DataFrame: {e}')
             return None
-class DataFilter:
+class TimeFilter:
 
     def __init__(
         self,
@@ -628,9 +628,50 @@ class DataFilter:
         """Method to access the filtered data."""
         return self.filtered_data
 
+class TypeFilter:
+    def __init__(self, dataframe: pd.DataFrame, *filter_vars: str):
+        """
+        Initializes the TypeFilter with a DataFrame and a variable number of filter column names.
+
+        Args:
+            dataframe (pd.DataFrame): The DataFrame to be filtered.
+            *filter_vars (str): Variable number of string arguments, each representing a column name
+                                to apply the 'notna()' and '!= "M"' filters to.
+        """
+        self.df = dataframe
+        self.filter_vars = [var for var in filter_vars if var] # Store only non-empty filter variables
+
+    def filter_data(self) -> pd.DataFrame:
+        """
+        Filters the DataFrame based on the provided filter variables.
+        For each specified filter variable, it removes rows where the column is NaN
+        and where the column's value is 'M'.
+
+        Returns:
+            pd.DataFrame: The filtered DataFrame.
+        """
+        filtered_dataframe = self.df.copy() # Work on a copy to avoid modifying the original DataFrame
+
+        if not self.filter_vars:
+            print("No filter variables provided. Returning the original DataFrame.")
+            return self.df
+
+        for var in self.filter_vars:
+            if var in filtered_dataframe.columns:
+                # Apply notna() filter
+                filtered_dataframe = filtered_dataframe[filtered_dataframe[var].notna()]
+                # Apply != 'M' filter
+                filtered_dataframe = filtered_dataframe[filtered_dataframe[var] != 'M']
+            else:
+                print(f"Warning: Column '{var}' not found in the DataFrame. Skipping this filter.")
+
+        return filtered_dataframe
+
 
 analysis_date = datetime.datetime(2025, 5, 5, 0, 0)
 dataframe = SFC_datafetcher(analysis_date).fetch_data()
 print(dataframe.head)
-filtered_data = DataFilter(dataframe, analysis_date, filter_by_minute=59).get_filtered_data()
+filtered_data = TimeFilter(dataframe, analysis_date, filter_by_minute=59).get_filtered_data()
+print(filtered_data.head)
+filtered_data = TypeFilter(filtered_data, 'mslp', 'tmpf').filter_data()
 print(filtered_data.head)
