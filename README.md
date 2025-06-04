@@ -9,18 +9,25 @@ for AI-driven weather forecasting. The main approach to this is to have an AI th
 gather, process, and prepare its own datasets to train itself on.
 
 ## Install
-1. Clone the repository
-` git clone https://github.com/nb101bn/Weather-Prediction-AI.git`
- `cd Weather-Prediction-AI`
-2. Create a virtual environment:
-` python -m venv {environment name}`
- `# On Windows:`
- `.\venv\Scripts\activate`
- `# On macOS/Linux`
- `source {environment name}/bin/activate`
- 
-3. Install the required dependencies:
-`pip install -r requirements.txt`
+1. **Clone the repository:**
+```
+git clone https://github.com/nb101bn/Weather-Prediction-AI.git`
+cd Weather-Prediction-AI
+```
+
+2. **Create a virtual environment:**
+```
+python -m venv {environment name}`
+ # On Windows:`
+ .\venv\Scripts\activate`
+ # On macOS/Linux`
+ source {environment name}/bin/activate
+``` 
+*Replace '{Environment name}' with your desired name for the virtual environment.*
+3. **Install the required dependencies:**
+```
+pip install -r requirements.txt
+```
 
 ## Contact
 [nb101bn](https://github.com/nb101bn)
