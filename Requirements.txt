@@ -1,0 +1,11 @@
+torch>=1.10.0
+torchvision>=0.11.0
+torchaudio>=0.10.0
+numpy>=1.21.0
+pandas>=1.3.0
+matplotlib>=3.4.0
+requests>=2.26.0
+Pillow>=8.4.0 # PIL is part of Pillow
+scipy>=1.7.0
+cartopy>=0.20.0
+MetPy>=1.2 # metpy.calc and metpy.units are from MetPy
