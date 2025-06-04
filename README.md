@@ -24,6 +24,7 @@ python -m venv {environment name}`
  source {environment name}/bin/activate
 ``` 
 *Replace '{Environment name}' with your desired name for the virtual environment.*
+
 3. **Install the required dependencies:**
 ```
 pip install -r requirements.txt
