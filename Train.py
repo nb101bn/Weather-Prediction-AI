@@ -6,7 +6,7 @@ import torch.nn as nn
 from Database_Training.CoCoRaHS_Precip_Obs import CoCoRaHS_Dataset
 from Database_Training.Surface_Maps_Training import SurfaceMap_Dataset
 from Database_Training.Combined_Datasets import Combined_Datasets
-from Model.AI_Processor import CNN
+from Models.AI_Processor import CNN
 import datetime
 import matplotlib.pyplot as plt
 import numpy as np

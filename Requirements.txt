@@ -9,3 +9,9 @@ Pillow>=8.4.0 # PIL is part of Pillow
 scipy>=1.7.0
 cartopy>=0.20.0
 MetPy>=1.2 # metpy.calc and metpy.units are from MetPy
+# --- Point-forecast HUD / API ---
+flask>=2.3
+python-dotenv>=1.0 # lets `flask run` read .flaskenv
+fastapi>=0.100
+uvicorn>=0.23
+pydantic>=2.0

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Skew-T Point Forecast HUD</title>
+  <link rel="stylesheet" href="{{ url_for('css', filename='custom.css') }}">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="brand-mark">&#9650;</span> SKEW-T POINT FORECAST <span class="brand-sub">HUD</span></div>
+  <div class="pills">
+    <span class="pill" id="pill-backend" title="Which service answered the last request">BACKEND: …</span>
+    <span class="pill" id="pill-source">SOURCE: …</span>
+    <span class="pill" id="pill-model">MODEL: …</span>
+    <span class="pill clock" id="utc-clock">--:--:-- Z</span>
+  </div>
+</header>
+
+<main class="layout">
+  <!-- ================= controls ================= -->
+  <section class="panel controls">
+    <h2>Command</h2>
+    <form id="command-form" autocomplete="off">
+      <div class="command-line"><span class="prompt">&gt;</span>
+        <input id="command" type="text" placeholder='e.g. "dewpoint +2 HRs" or "850mb winds +6h"' aria-label="Forecast command">
+      </div>
+      <div id="command-feedback" class="feedback">Type a component and lead time, then press Enter.</div>
+    </form>
+
+    <h2>Station</h2>
+    <div class="row">
+      <select id="station-select" aria-label="Station"></select>
+      <input id="station-custom" type="text" maxlength="6" placeholder="WMO #" aria-label="Custom station">
+    </div>
+
+    <h2>Data source</h2>
+    <div class="segmented" id="source-toggle">
+      <button type="button" data-source="wyoming" class="active">Wyoming (live)</button>
+      <button type="button" data-source="synthetic">Synthetic demo</button>
+    </div>
+
+    <h2>Initialization</h2>
+    <div class="row">
+      <label class="check"><input type="checkbox" id="init-latest" checked> Latest sounding</label>
+    </div>
+    <div class="row" id="init-picker" hidden>
+      <input id="init-date" type="date" aria-label="Init date">
+      <select id="init-hour" aria-label="Init hour"><option value="00">00Z</option><option value="12">12Z</option></select>
+    </div>
+
+    <h2>Component</h2>
+    <div id="component-grid" class="component-grid"></div>
+
+    <h2>Lead time <span id="lead-display" class="lead-display">+2 HRs</span></h2>
+    <div id="lead-chips" class="chips"></div>
+    <div class="row">
+      <input id="lead-range" type="range" min="1" max="48" value="2" aria-label="Lead hours">
+      <input id="lead-number" type="number" min="1" max="48" value="2" aria-label="Lead hours value">
+    </div>
+
+    <h2>Headline level</h2>
+    <select id="level-select" aria-label="Headline level"></select>
+
+    <button id="run" class="run" type="button">RUN FORECAST</button>
+  </section>
+
+  <!-- ================= results ================= -->
+  <section class="results">
+    <div id="warnings" class="warnings"></div>
+    <div class="panel headline" id="headline">
+      <div class="headline-empty">Select a component and lead time, then run a forecast.</div>
+    </div>
+    <div class="charts">
+      <div class="panel chart"><h2>Skew-T log-p <span class="muted" id="skewt-caption"></span></h2><svg id="skewt" viewBox="0 0 560 560" role="img" aria-label="Skew-T diagram"></svg></div>
+      <div class="panel chart"><h2>Component profile <span class="muted" id="profile-caption"></span></h2><svg id="profile-chart" viewBox="0 0 420 560" role="img" aria-label="Component profile"></svg></div>
+    </div>
+    <div class="lower">
+      <div class="panel"><h2>Forecast by level</h2><table class="levels"><thead><tr><th>Level</th><th>hPa</th><th>Observed</th><th>Forecast</th><th>&Delta;</th></tr></thead><tbody id="level-table"></tbody></table></div>
+      <div class="panel"><h2>Model node</h2><div id="model-info" class="model-info muted">No forecast yet.</div></div>
+      <div class="panel"><h2>Activity log</h2><ol id="log" class="log"></ol></div>
+    </div>
+  </section>
+</main>
+<script>window.HUD_CONFIG = {apiUrl: {{ api_url|tojson }}};</script>
+<script src="{{ url_for('js', filename='custom.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+# downloaded Wyoming soundings and trained model checkpoints (regenerate with the train command)
+Database_Training/cache/
+Models/checkpoints/
