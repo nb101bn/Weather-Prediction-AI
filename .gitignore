@@ -5,3 +5,5 @@ Database_Training/cache/
 Database_Training/__pycache__/
 Models/checkpoints/
 wenv/
+# generated 300 mb maps
+Maps/output/

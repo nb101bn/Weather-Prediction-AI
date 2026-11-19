@@ -15,3 +15,8 @@ python-dotenv>=1.0 # lets `flask run` read .flaskenv
 fastapi>=0.100
 uvicorn>=0.23
 pydantic>=2.0
+# --- Upper-air 3 km CAM map model (Train_Upper_Air_Maps.py / Forecast_Upper_Air_Maps.py) ---
+pygrib>=2.1.5 # GRIB2 decoding of HRRR / NAM 3 km truth (bundles ecCodes). Alternative: `eccodes`, but do not
+              # install both - two copies of libeccodes in one process crash (see README)
+shapely>=2.0 # needed by python-awips
+# python-awips>=23.4 # optional: only for --truth awips (grids straight from an AWIPS EDEX server)
