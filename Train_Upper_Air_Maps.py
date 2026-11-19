@@ -65,6 +65,7 @@ def data_root(truth: str, obs: str, domain: str) -> str:
 
 # ---------------------------------------------------------------------------------------------- data
 def build_dataset(args, grid) -> str:
+    print(f"[data] building training samples for {args.truth} truth, {args.obs} obs, domain {args.domain}")
     root = data_root(args.truth, args.obs, args.domain)
     if args.skip_build:
         return root

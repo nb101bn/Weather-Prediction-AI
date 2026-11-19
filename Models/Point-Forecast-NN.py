@@ -173,7 +173,7 @@ def _physical_errors(component, base, delta_pred, delta_true, mask) -> dict:
 
 def train_component(component: str, soundings, source: str, stations, epochs: int = 40, lr: float = 2e-3,
                     batch_size: int = 256, val_fraction: float = 0.2, seed: int = 0,
-                    checkpoint_root: str = CHECKPOINT_ROOT, verbose: bool = True) -> dict:
+                    checkpoint_root: str = CHECKPOINT_ROOT, verbose: bool = True, resume: bool = False) -> dict:
     """Train one component node on cleaned (time, df) soundings and save ``<root>/<source>/<component>.pt``."""
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -197,6 +197,17 @@ def train_component(component: str, soundings, source: str, stations, epochs: in
     config = {"in_channels": injestor.n_channels, "n_rows": injestor.n_rows, "n_scalars": inj.N_SCALARS,
               "out_channels": len(inj.TARGET_VARS[component]), "lead_scaled": True}
     model = PointForecastNN(**config)
+    path = os.path.join(checkpoint_root, source, f"{component}.pt")
+    prior_station = []
+    if resume and os.path.exists(path):
+        ckpt = torch.load(path, map_location="cpu", weights_only=False)
+        if ckpt.get("config") == config:
+            model.load_state_dict(ckpt["state_dict"])
+            prior_station = ckpt.get("stations", [])
+            if verbose:
+                print(f"  [{component}] resuming training from {path} (trained on {prior_station})")
+        elif verbose:
+            print(f"  [{component}] ignoring {path} training from scratch (config mismatch: {ckpt.get('config')} vs {config})")
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=max(epochs, 1))
     history, best_state, best_val, best_epoch = [], None, float("inf"), 0
@@ -455,7 +466,7 @@ def _cli_train(args) -> None:
     for component in components:
         print(f"Training '{component}' node ...")
         train_component(component, soundings, args.source, args.station, epochs=args.epochs, lr=args.lr,
-                        batch_size=args.batch_size, checkpoint_root=args.checkpoint_root)
+                        batch_size=args.batch_size, checkpoint_root=args.checkpoint_root, resume=args.resume)
 
 
 def main(argv=None) -> None:
@@ -471,6 +482,7 @@ def main(argv=None) -> None:
     train.add_argument("--lr", type=float, default=2e-3)
     train.add_argument("--batch-size", type=int, default=256)
     train.add_argument("--checkpoint-root", default=CHECKPOINT_ROOT)
+    train.add_argument("--resume", action="store_true", help="resume training from existing checkpoint if found")
     fc = sub.add_parser("forecast", help="run a forecast, print JSON")
     fc.add_argument("query", help="e.g. \"dewpoint +2 hrs\"")
     fc.add_argument("--station", default="72451")
